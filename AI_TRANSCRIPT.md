@@ -58,7 +58,7 @@ Note: Git printed "LF will be replaced by CRLF" warnings. This is normal on Wind
 
 ---
 
-## Commit 3 - verdict logic (in progress, not yet committed)
+## Commit 3 - verdict logic (committed as 9acdc73)
 
 - AI proposed `src/verdict.js` first. The first proposal IGNORED invalid severities silently, which could turn a REJECT into a wrong ACCEPT. The user pointed this out; the AI agreed it was a flaw in its proposal and changed the code so any invalid severity returns `valid: false` with an error and no verdict.
 - Created `src/verdict.js` and `tests/verdict.spec.js` (36 tests: 8 mandatory, table check, boundary cases, multiple severities, invalid sample sizes, invalid severities). Removed `tests/.gitkeep` since the folder now has a real file.
@@ -70,7 +70,7 @@ Note: Git printed "LF will be replaced by CRLF" warnings. This is normal on Wind
 
 ---
 
-## Commit 4 - inspection state and validation (in progress, not yet committed)
+## Commit 4 - inspection state and validation (committed as b6148da)
 
 - AI proposed `src/inspection.js` (class `Inspection` with start, record defect, list defects, get verdict) and showed the code and test list BEFORE creating files. User approved with clarifications: keep the 100-character description limit but document it in DECISIONS.md as an implementation assumption; invalid new inspection input must leave the existing inspection unchanged; errors returned clearly (`{ valid: false, error }`) so Commit 5 can display them; keep sample-size string parsing, severity normalization and defensive copies.
 - Created `src/inspection.js` and `tests/inspection.spec.js`. Added the assumptions to DECISIONS.md section 3. Commits 1-3 code not changed.
@@ -78,10 +78,42 @@ Note: Git printed "LF will be replaced by CRLF" warnings. This is normal on Wind
 
 ---
 
-**Commit 4 actual test run:** `npm test` -> 94 passed (3.2s), exit code 0 (36 existing verdict tests + 58 new inspection tests). Not committed yet; waiting for user review.
+**Commit 4 actual test run:** `npm test` -> 94 passed (3.2s), exit code 0 (36 existing verdict tests + 58 new inspection tests). This run was before the review; Commit 4 was later created as b6148da.
 
 ---
 
 **Mutation check for Commit 4 (requested by user):** `src/inspection.js` was backed up, then the condition was temporarily changed from `number < 1` to `number <= 1`. Actual result: the test "sample size 1 is valid" failed as expected (1 failed, 57 passed in `inspection.spec.js`). The original file was restored from the backup and the SHA256 hashes matched (`DC10E0D0...B051DBC`). The complete suite then passed: 94 tests. Only the sample-size condition was mutation-tested.
+
+---
+
+Commit 4 was created as `b6148da` ("feat: add inspection state, input validation and tests") after the user reviewed the diff and the mutation check.
+
+## Commit 5 - terminal menu (`src/index.js`)
+
+- AI first read README.md, package.json, src/index.js, src/inspection.js, src/verdict.js, DECISIONS.md and AI_TRANSCRIPT.md, then proposed the architecture and code WITHOUT changing files. The AI noticed its own omission: README.md had become outdated (still said "setup OK") because it was not updated in Commits 3 and 4.
+- User approved with decisions: create `tests/cli.spec.js`; invalid severity is asked again and the description is not asked until severity is valid; update README and DECISIONS; fix the old "in progress" wording in this transcript.
+- AI ran a small experiment in the scratchpad (not in the project) to check an assumption about piped input. Result: plain `readline/promises` `question()` lost lines (only the first of 3 piped lines was answered, then the program silently stopped), while a line queue worked and returned `null` at real end of input. The AI's first EOF test (case C) was set up wrongly because PowerShell adds an extra newline to piped text; it was redone correctly (case D). Also found: PowerShell adds a hidden BOM character to the first piped line; `String.trim()` removes it.
+- User added decisions: invalid description asks only the description again; typing `cancel` (any case, spaces ignored) at the severity or description questions returns to the menu without recording a defect.
+- Implemented: `src/index.js` (menu, `run`, `createAsk` queue for piped input, `formatDefectList`, `formatVerdict`), `tests/cli.spec.js` (69 tests: menu, EOF, start, record, severity retry, description retry, cancel, list, verdict, repeated operations, the 8 mandatory scenarios through the menu, and the real program with piped input), updated README.md and DECISIONS.md.
+- Not changed: `src/inspection.js`, `src/verdict.js`, `tests/verdict.spec.js`, `tests/inspection.spec.js`, `package.json`, `playwright.config.js` (SHA256 checked before and after).
+- First run of `tests/cli.spec.js` alone: 69 passed (9.1s). The full-suite run is recorded by the commit step.
+
+---
+
+**Final mutation test for Commit 5 (requested by user):** `src/index.js` was backed up and five mutations were applied one at a time. Each mutation was caught by tests in `tests/cli.spec.js`:
+
+| Mutation | Result |
+|---|---|
+| 1. Invalid-severity retry broken (any severity accepted) | 5 failed, 64 passed |
+| 2. Invalid-description retry broken (returns to menu after the first error) | 4 failed, 65 passed |
+| 3. Cancel handling broken (cancel never recognised) | 8 failed, 61 passed |
+| 3b. Cancel no longer case-insensitive | 3 failed, 66 passed |
+| 3c. Cancel no longer ignores surrounding spaces | 2 failed, 67 passed |
+
+All 5 mutations were detected. After every mutation the original `src/index.js` was restored from the backup and its SHA256 matched the original (`1BB8631B...55F19EE`). The SHA256 of the protected files (`src/verdict.js`, `src/inspection.js`, `tests/verdict.spec.js`, `tests/inspection.spec.js`, `package.json`, `playwright.config.js`) also matched the values taken before the Commit 5 work.
+
+Not mutation-tested: the "not changed" and "cleared" messages in the Start Inspection handler. Not checked by hand: Ctrl+Z then Enter in a real Windows console (piped end of input is covered by tests).
+
+**Final result before Commit 5:** `npm test` -> 163 passed (36 verdict + 58 inspection + 69 cli), exit code 0, checked again right before the commit. Commit 5 is the commit "feat: add interactive terminal menu" (see `git log` for its hash). No remote is configured and nothing was pushed.
 
 ---
