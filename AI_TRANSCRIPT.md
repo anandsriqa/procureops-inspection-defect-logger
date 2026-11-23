@@ -1,6 +1,8 @@
-# AI Conversation Transcript - Inspection Defect Logger
+# Summary of AI-Assisted Work - Inspection Defect Logger
 
-Record of the actual conversation between the candidate and Claude (AI). Updated after each step.
+This file is a **summary** of the AI-assisted work on this project, written by the AI (Claude) while the work was done. It is **not** a word-for-word transcript of the conversation: prompts and replies are summarised, and the full text of the conversation is not part of this repository. The file name `AI_TRANSCRIPT.md` is kept because other project files refer to it.
+
+How it was kept: entries were added while the work was done, up to Commit 6. The last two documentation steps (Step 9 and Step 10) and the final test result were added afterwards, in one correction, so they are shorter. The commit hashes, test counts and results written here were taken from real command output or from the Git history. `git log` is the authoritative record of what was committed.
 
 ---
 
@@ -16,7 +18,7 @@ Record of the actual conversation between the candidate and Claude (AI). Updated
 
 **Open issue (resolved):** Git was not installed. User installed it; after an app restart `git --version` returned 2.56.1. Git identity was already configured globally.
 
-**Commit 1:** `8d17723` - "chore: initialize Node.js project with package.json and .gitignore" (branch `main`).
+**Commit 1:** `8d17723` - "chore: initialize Node.js project with package.json and .gitignore" (branch `main`). This commit was later replaced; see "Redo of Commit 1" below.
 
 ## Step 2 - Install dependencies
 
@@ -114,11 +116,11 @@ All 5 mutations were detected. After every mutation the original `src/index.js` 
 
 Not mutation-tested: the "not changed" and "cleared" messages in the Start Inspection handler. Not checked by hand: Ctrl+Z then Enter in a real Windows console (piped end of input is covered by tests).
 
-**Final result before Commit 5:** `npm test` -> 163 passed (36 verdict + 58 inspection + 69 cli), exit code 0, checked again right before the commit. Commit 5 is the commit "feat: add interactive terminal menu" (see `git log` for its hash). No remote is configured and nothing was pushed.
+**Final result before Commit 5:** `npm test` -> 163 passed (36 verdict + 58 inspection + 69 cli), exit code 0, checked again right before the commit. Commit 5 is the commit "feat: add interactive terminal menu" (`49578fa`). No remote is configured and nothing was pushed.
 
 ---
 
-## Commit 6 - review findings turned into tests and small fixes
+## Commit 6 - review findings turned into tests and small fixes (committed as ff1e642)
 
 - Step 8 review (BVA and equivalence partitioning) was done first with NO file changes. A read-only probe showed the code was correct at all 30 table-boundary checks, but the tests had gaps: Minor limits of rows 16-51 and 190-719 had no verdict tests, row-edge exact limits were missing, and several input classes were untested.
 - The review also found problems that were the AI's own: (1) the oversized sample-size error said "must be a whole number" although the number is whole; (2) DECISIONS.md said "The CLI does not repeat any rules", but `index.js` prints a fixed `(limit 0)` for Critical; (3) the AI's file-writing tool turned the escape `\uFEFF` into an invisible literal character in `tests/cli.spec.js`, so the BOM test was fragile.
@@ -140,5 +142,29 @@ Results:
 - The old 163-test suite (from Commit 5) caught 9 of the 15 and missed 6 (oversized condition never fires, oversized boundary off by one, length counted before trimming, length counted in symbols, and the logic mutations for row 2 and row 4). The new tests close those gaps. NOTE: the instruction for this note said the old suite caught 6; the actual run output shows 6 missed and 9 caught, so the real numbers are recorded here. An earlier summary by the AI wrongly said "8"; that was also corrected.
 - The 9 mutations caught by the old suite include all five table-value mutations. They were caught by the old test "table matches the assignment exactly", so the earlier Step 8 statement "Minor limits of rows 2 and 4 have no tests" was true for the verdict behaviour, but overstated for the table values.
 - Not mutation-tested: the CLI-only tests added in this commit (Batch IDs "123" and "cancel", menu inputs -1, 01, 10, severity "Ma jor" through the menu).
+
+---
+
+## Step 9 - README finalization (committed as ee86c86)
+
+- Before writing, the AI read `README.md`, `package.json`, `playwright.config.js`, the three source files and the test files, and checked the facts it would state: the installed Playwright Test 1.65.1 declares `node >= 20`, and the project was run with Node.js v24.22.1 and npm 11.19.1 on Windows 11.
+- The AI checked the README commands on a fresh clone of the repository, in a scratch folder outside the project: `npm install` (3 packages, 0 vulnerabilities), `npm test` (251 passed), `npm start` with piped input, `npx playwright test -g "Mandatory"` (19 passed), and a PowerShell helper and a bash helper for the eight mandatory scenarios (8 of 8 matched in Windows PowerShell 5.1 and in Git Bash 5.3).
+- The proposed README was shown first and edited only after approval. Decisions: make no claim about the keys Ctrl+Z, Ctrl+D or Ctrl+C (never tried in a real console); the Ctrl+Z / Ctrl+C sentence that Commit 5 had put in the README was removed. Keep "251 tests passed at the time of writing". Keep both helpers and say where each was tested. Keep "Node.js 20 or newer" as the Playwright Test requirement and say that the project itself was tested only with Node.js v24.22.1.
+- Before committing, HEAD was checked (`ff1e642`), `npm test` was run (251 passed), and only `README.md` was staged. Commit `ee86c86` "docs: finalize README with install, run, test and verification steps" contains only `README.md`.
+
+---
+
+## Step 10 - DECISIONS.md completion (committed as 7e90b9e)
+
+- The AI first did a read-only review of `DECISIONS.md`, this file, `README.md`, the source and test files and the Git history. It proposed the text for all four sections, with evidence for each claim and a list of claims that could not be verified.
+- Two checks were run only to support the "could still go wrong" section: (1) the sample size typed with Devanagari, Arabic-Indic or full-width digits is rejected by the code; (2) when the output pipe closes early (`yes 3 | head -3000 | node src/index.js | head -1`), Node.js crashed with an unhandled EPIPE error and exit code 1. This was reproduced only in Git Bash on Windows with Node.js v24.22.1.
+- Corrections from the candidate before editing: remove the item about the wrongly set up piped-input experiment (Section 1 keeps items 1 to 7); keep the exact mutation result (the old suite caught 9 and missed 6, the new suite detected all 15); in Section 2 do not claim a deliberate decision where the history does not show one; in Section 3 remove the unverified Ctrl+Z claim, do not say `0x10` and `1,000` are covered by tests, and explain the difference between the sample-size checks in `inspection.js` and `verdict.js`; in Section 4 keep exactly three risks (real keyboard, EPIPE, non-ASCII digits). After the edit, one more wording change was made in Section 1 item 5 ("mutations 5a and 5c" became "the 'never fires' and 'off by one' mutations").
+- Before committing, HEAD was checked (`ee86c86`) and only `DECISIONS.md` was staged. Commit `7e90b9e` "docs: complete DECISIONS.md with AI mistakes, exclusions, assumptions and risks" contains only `DECISIONS.md`.
+
+---
+
+## Final test result
+
+- `npm test` -> **251 passed** (80 verdict + 83 inspection + 88 cli), 0 failed. This result was seen right before the README commit (`ee86c86`) and again in a read-only final audit on a fresh clone of the last commit `7e90b9e`; the audit changed no file. `ee86c86` changed only `README.md` and `7e90b9e` changed only `DECISIONS.md`. No test was run as a separate step for the `DECISIONS.md` commit itself.
 
 ---
