@@ -227,6 +227,17 @@ These are the behaviours that are present in the code. Reasons and more detail a
 - **Piped input:** the program also works with piped input. When the input runs out, it prints `Input ended. Goodbye!` and exits with code 0.
 - **Tested on** Windows 11 with Node.js v24.22.1 and npm 11.19.1 only (Windows PowerShell 5.1 for the PowerShell helper, Git Bash 5.3 for the bash helper). Other operating systems and Node.js versions were not tested.
 
+## Time Spent
+
+The assignment was completed in approximately 3 hours.
+
+- Requirement analysis: 30 minutes
+- Development and implementation: 1 hour 15 minutes
+- Testing and debugging: 45 minutes
+- Documentation and GitHub submission: 30 minutes
+
+**Total estimated time: 3 hours**
+
 ## Project structure
 
 ```
