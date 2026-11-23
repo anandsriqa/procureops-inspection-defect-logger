@@ -20,7 +20,13 @@ function parseSampleSize(input) {
     number = Number(input.trim());
   }
 
-  // Catches empty, "abc", 5.5, NaN, Infinity, null, undefined and huge numbers.
+  // A whole number that is too big to be handled exactly (above Number.MAX_SAFE_INTEGER).
+  // It is rejected as before. Only the message is different, so it is not misleading.
+  if (Number.isInteger(number) && !Number.isSafeInteger(number)) {
+    return { valid: false, error: 'Sample size must be a positive safe integer.' };
+  }
+
+  // Catches empty, "abc", 5.5, NaN, Infinity, null and undefined.
   if (!Number.isSafeInteger(number)) {
     return { valid: false, error: 'Sample size must be a whole number, for example 52.' };
   }

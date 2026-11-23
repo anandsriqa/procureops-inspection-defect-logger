@@ -117,3 +117,28 @@ Not mutation-tested: the "not changed" and "cleared" messages in the Start Inspe
 **Final result before Commit 5:** `npm test` -> 163 passed (36 verdict + 58 inspection + 69 cli), exit code 0, checked again right before the commit. Commit 5 is the commit "feat: add interactive terminal menu" (see `git log` for its hash). No remote is configured and nothing was pushed.
 
 ---
+
+## Commit 6 - review findings turned into tests and small fixes
+
+- Step 8 review (BVA and equivalence partitioning) was done first with NO file changes. A read-only probe showed the code was correct at all 30 table-boundary checks, but the tests had gaps: Minor limits of rows 16-51 and 190-719 had no verdict tests, row-edge exact limits were missing, and several input classes were untested.
+- The review also found problems that were the AI's own: (1) the oversized sample-size error said "must be a whole number" although the number is whole; (2) DECISIONS.md said "The CLI does not repeat any rules", but `index.js` prints a fixed `(limit 0)` for Critical; (3) the AI's file-writing tool turned the escape `\uFEFF` into an invisible literal character in `tests/cli.spec.js`, so the BOM test was fragile.
+- User decisions: change only the oversized message to "Sample size must be a positive safe integer."; keep numeric text behaviour ("52", "007" valid; "52.0", "+52", "1e3" invalid) and document it; keep UTF-16 description length and document it; correct the DECISIONS.md statement; replace the invisible BOM with an explicit escape; add the listed tests.
+- Implementation notes: the message fix needed one extra condition (`Number.isInteger(number) && !Number.isSafeInteger(number)`), because old tests still expect "whole number" for "abc", 5.5, NaN and Infinity and must not be weakened. Before/after snapshot of 55 inputs: same valid/invalid decision and same parsed value for all 55; only the message of 9 oversized inputs changed; `verdict.js` results identical.
+- New fact found while checking: `verdict.js` called directly accepts a sample size of 2 to the power 53 (it checks `Number.isInteger` only), while `Inspection` rejects it. Not reachable through the menu. Left unchanged on purpose (user asked not to change verdict behaviour) and documented in DECISIONS.md.
+- New tests: table-driven limit / limit+1 for all five rows at the smallest and largest sample size (including `Number.MAX_SAFE_INTEGER`), Major and Minor and Critical and combined (40 tests); omitted and null defects; `MAX_SAFE_INTEGER` and +1; numeric text formats; description length with spaces, inner spaces and emoji; Batch IDs "123" and "cancel"; severity "Ma jor"; menu inputs -1, 01, 10; oversized sample size through the menu; real-process mandatory scenarios 6 and 8. Emoji are written with `String.fromCodePoint` and the BOM as the explicit escape, so no invisible characters remain (0 non-ASCII characters in `src/` and `tests/`).
+- Actual result: `npm test` -> 251 passed (80 verdict + 83 inspection + 88 cli), exit code 0, 0 failed. Before Commit 6 it was 163 passed.
+- Mutation testing of the new tests was done afterwards, before the commit (see the note below).
+
+---
+
+**Mutation testing for Commit 6 (requested by user):** 15 mutations were tested on a separate scratch copy of the project, because 12 of them change the limits table in `src/verdict.js`, and `verdict.js` was not to be modified. 12 were requested: Minor limit of row 2 (4 to 5), row 4 (17 to 18), row 5 (32 to 33), row 1 (1 to 2) and row 3 (9 to 10); the oversized safe-integer condition (never fires, inverted, boundary off by one); the description-length condition (">" to ">=", limit 100 to 101, length counted before trimming spaces, length counted in symbols instead of UTF-16 units). 3 extra mutations were added by the AI: table intact, but the Minor comparison accepts one extra defect in one row only.
+
+Results:
+- All 15 mutations were detected by the new test suite (251 tests); in every case the relevant tests failed.
+- Each mutation was restored in a `finally` block from a pristine backup and the SHA256 matched every time.
+- The original project files remained unchanged: the SHA256 of 13 files was identical before and after, and the scratch copy was deleted afterwards.
+- The old 163-test suite (from Commit 5) caught 9 of the 15 and missed 6 (oversized condition never fires, oversized boundary off by one, length counted before trimming, length counted in symbols, and the logic mutations for row 2 and row 4). The new tests close those gaps. NOTE: the instruction for this note said the old suite caught 6; the actual run output shows 6 missed and 9 caught, so the real numbers are recorded here. An earlier summary by the AI wrongly said "8"; that was also corrected.
+- The 9 mutations caught by the old suite include all five table-value mutations. They were caught by the old test "table matches the assignment exactly", so the earlier Step 8 statement "Minor limits of rows 2 and 4 have no tests" was true for the verdict behaviour, but overstated for the table values.
+- Not mutation-tested: the CLI-only tests added in this commit (Batch IDs "123" and "cancel", menu inputs -1, 01, 10, severity "Ma jor" through the menu).
+
+---

@@ -219,3 +219,120 @@ test.describe('Invalid severity must never give a silent ACCEPT', () => {
     expect(result.valid).toBe(false);
   });
 });
+
+
+// ---------------------------------------------------------------------------
+// Commit 6: table-driven boundary tests.
+// The expected numbers below are typed again by hand from the assignment table,
+// so these tests do not depend on ACCEPTANCE_LIMITS in the code.
+// "from" and "to" are the smallest and largest sample size of each row.
+// ---------------------------------------------------------------------------
+const TABLE_ROWS = [
+  { row: 1, from: 1, to: 15, major: 0, minor: 1 },
+  { row: 2, from: 16, to: 51, major: 2, minor: 4 },
+  { row: 3, from: 52, to: 189, major: 4, minor: 9 },
+  { row: 4, from: 190, to: 719, major: 8, minor: 17 },
+  { row: 5, from: 720, to: Number.MAX_SAFE_INTEGER, major: 15, minor: 32 },
+];
+
+// Helper: Major defects and Minor defects together.
+function majorAndMinor(majorCount, minorCount) {
+  return [...makeDefects('Major', majorCount), ...makeDefects('Minor', minorCount)];
+}
+
+test.describe('Every table row at its smallest and largest sample size', () => {
+  for (const r of TABLE_ROWS) {
+    for (const size of [r.from, r.to]) {
+      const where = `row ${r.row}, sample ${size}`;
+
+      test(`${where}: Major ${r.major} = ACCEPT, Major ${r.major + 1} = REJECT`, () => {
+        const atLimit = calculateVerdict(size, makeDefects('Major', r.major));
+        expect(atLimit.verdict).toBe('ACCEPT');
+        // The limits in the result prove that the correct row was used.
+        expect(atLimit.limits).toEqual({ major: r.major, minor: r.minor });
+
+        const over = calculateVerdict(size, makeDefects('Major', r.major + 1));
+        expect(over.verdict).toBe('REJECT');
+        expect(over.reasons).toHaveLength(1);
+        expect(over.reasons[0]).toContain('Major');
+      });
+
+      test(`${where}: Minor ${r.minor} = ACCEPT, Minor ${r.minor + 1} = REJECT`, () => {
+        const atLimit = calculateVerdict(size, makeDefects('Minor', r.minor));
+        expect(atLimit.verdict).toBe('ACCEPT');
+        expect(atLimit.limits).toEqual({ major: r.major, minor: r.minor });
+
+        const over = calculateVerdict(size, makeDefects('Minor', r.minor + 1));
+        expect(over.verdict).toBe('REJECT');
+        expect(over.reasons).toHaveLength(1);
+        expect(over.reasons[0]).toContain('Minor');
+      });
+
+      test(`${where}: Critical 0 = ACCEPT, Critical 1 = REJECT`, () => {
+        expect(calculateVerdict(size, []).verdict).toBe('ACCEPT');
+
+        const one = calculateVerdict(size, makeDefects('Critical', 1));
+        expect(one.verdict).toBe('REJECT');
+        expect(one.reasons).toHaveLength(1);
+        expect(one.reasons[0]).toContain('Critical');
+      });
+
+      test(`${where}: Major ${r.major} + Minor ${r.minor} together = ACCEPT, either one over = REJECT`, () => {
+        const atBoth = calculateVerdict(size, majorAndMinor(r.major, r.minor));
+        expect(atBoth.verdict).toBe('ACCEPT');
+        expect(atBoth.counts).toEqual({ critical: 0, major: r.major, minor: r.minor });
+
+        const majorOver = calculateVerdict(size, majorAndMinor(r.major + 1, r.minor));
+        expect(majorOver.verdict).toBe('REJECT');
+        expect(majorOver.reasons).toHaveLength(1);
+        expect(majorOver.reasons[0]).toContain('Major');
+
+        const minorOver = calculateVerdict(size, majorAndMinor(r.major, r.minor + 1));
+        expect(minorOver.verdict).toBe('REJECT');
+        expect(minorOver.reasons).toHaveLength(1);
+        expect(minorOver.reasons[0]).toContain('Minor');
+
+        const bothOver = calculateVerdict(size, majorAndMinor(r.major + 1, r.minor + 1));
+        expect(bothOver.verdict).toBe('REJECT');
+        expect(bothOver.reasons).toHaveLength(2);
+
+        const withCritical = calculateVerdict(size, [
+          ...majorAndMinor(r.major, r.minor),
+          ...makeDefects('Critical', 1),
+        ]);
+        expect(withCritical.verdict).toBe('REJECT');
+        expect(withCritical.reasons).toHaveLength(1);
+        expect(withCritical.reasons[0]).toContain('Critical');
+      });
+    }
+  }
+});
+
+test.describe('Defects argument omitted or null', () => {
+  test('calculateVerdict(52) with no defects argument = ACCEPT with zero counts', () => {
+    const result = calculateVerdict(52);
+    expect(result.valid).toBe(true);
+    expect(result.verdict).toBe('ACCEPT');
+    expect(result.counts).toEqual({ critical: 0, major: 0, minor: 0 });
+    expect(result.reasons).toEqual([]);
+  });
+
+  test('defects explicitly undefined is the same as omitted', () => {
+    const result = calculateVerdict(52, undefined);
+    expect(result.valid).toBe(true);
+    expect(result.verdict).toBe('ACCEPT');
+  });
+
+  test('defects null gives an error and no verdict (null is not "omitted")', () => {
+    const result = calculateVerdict(52, null);
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Defects must be a list.');
+    expect(result.verdict).toBeUndefined();
+  });
+
+  test('invalid sample size is still reported when defects are omitted', () => {
+    const result = calculateVerdict(0);
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Sample size must be a whole number of 1 or more.');
+  });
+});

@@ -537,7 +537,7 @@ test.describe('Real program: node src/index.js with piped input', () => {
   });
 
   test('a hidden BOM character at the start (PowerShell pipe) is ignored', () => {
-    const result = runProcess('﻿1\nB-1\n52\n4\n5\n');
+    const result = runProcess('\uFEFF1\nB-1\n52\n4\n5\n');
     expect(result.status).toBe(0);
     expect(result.stdout).not.toContain('Invalid choice');
     expect(verdictOf(result.stdout)).toBe('ACCEPT');
@@ -551,5 +551,137 @@ test.describe('Real program: node src/index.js with piped input', () => {
     expect(result.stdout).toContain('Defect #1 recorded: [Major] real defect');
     expect(result.stdout).toContain('Cancelled. No defect was recorded.');
     expect(result.stdout).toContain('Defects (1):');
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Commit 6: more menu inputs and real-process scenarios.
+// ---------------------------------------------------------------------------
+
+const EMOJI = String.fromCodePoint(0x1f600);
+
+test.describe('More invalid menu choices', () => {
+  const moreBadChoices = [['"-1"', '-1'], ['"01" (leading zero)', '01'], ['"10"', '10']];
+  for (const [name, value] of moreBadChoices) {
+    test(`invalid choice ${name} shows a message and the menu again`, async () => {
+      const { output, unused } = await runScripted([value, '5']);
+      expect(output).toContain('Invalid choice. Please type a number from 1 to 5.');
+      expect(count(output, '===== Inspection Defect Logger =====')).toBe(2);
+      expect(output).toContain('Goodbye!');
+      expect(unused).toEqual([]);
+    });
+  }
+});
+
+test.describe('Sample size formats and limits through the menu', () => {
+  test('"52" is valid', async () => {
+    const { output } = await runScripted(['1', 'B-1', '52', '5']);
+    expect(output).toContain('Inspection started. Batch ID: B-1, Sample size: 52');
+  });
+
+  test('"007" is valid and shown as 7', async () => {
+    const { output } = await runScripted(['1', 'B-1', '007', '5']);
+    expect(output).toContain('Inspection started. Batch ID: B-1, Sample size: 7');
+  });
+
+  for (const text of ['52.0', '+52', '1e3']) {
+    test(`"${text}" shows the "whole number" error`, async () => {
+      const { output } = await runScripted(['1', 'B-1', text, '5']);
+      expect(output).toContain('Error: Sample size must be a whole number, for example 52.');
+      expect(output).not.toContain('Inspection started');
+    });
+  }
+
+  test('9007199254740991 (largest safe whole number) is valid', async () => {
+    const { output } = await runScripted(['1', 'B-1', '9007199254740991', '5']);
+    expect(output).toContain('Inspection started. Batch ID: B-1, Sample size: 9007199254740991');
+  });
+
+  test('9007199254740992 shows the "positive safe integer" error', async () => {
+    const { output } = await runScripted(['1', 'B-1', '9007199254740992', '4', '5']);
+    expect(output).toContain('Error: Sample size must be a positive safe integer.');
+    expect(output).not.toContain('Inspection started');
+    expect(verdictOf(output)).toBeNull();
+  });
+});
+
+test.describe('Batch IDs "123" and "cancel" through the menu', () => {
+  test('"123" is a normal Batch ID', async () => {
+    const { output } = await runScripted(['1', '123', '52', '5']);
+    expect(output).toContain('Inspection started. Batch ID: 123, Sample size: 52');
+  });
+
+  test('"cancel" is a normal Batch ID (not a command at the Batch ID question)', async () => {
+    const { output, unused } = await runScripted(['1', 'cancel', '52', '5']);
+    expect(output).toContain('Inspection started. Batch ID: cancel, Sample size: 52');
+    expect(unused).toEqual([]);
+  });
+
+  test('" Cancel " is a Batch ID too, spaces removed', async () => {
+    const { output } = await runScripted(['1', ' Cancel ', '52', '5']);
+    expect(output).toContain('Inspection started. Batch ID: Cancel, Sample size: 52');
+  });
+
+  test('with Batch ID "cancel", typing cancel at the severity question still cancels', async () => {
+    const { output } = await runScripted(['1', 'cancel', '52', '2', 'cancel', '3', '5']);
+    expect(output).toContain('Cancelled. No defect was recorded.');
+    expect(output).toContain('No defects recorded yet.');
+  });
+});
+
+test.describe('Severity "Ma jor" through the menu', () => {
+  test('is asked again, then the description is asked once', async () => {
+    const { output, prompts, unused } = await runScripted([
+      '1', 'B-1', '52',
+      '2', 'Ma jor', 'Major', 'Loose part',
+      '5',
+    ]);
+    expect(output).toContain('Invalid severity "Ma jor". Please enter one of: Critical, Major, Minor (or "cancel").');
+    expect(output).toContain('Defect #1 recorded: [Major] Loose part');
+    expect(prompts.filter((p) => p.startsWith('Severity')).length).toBe(2);
+    expect(prompts.filter((p) => p.startsWith('Short description')).length).toBe(1);
+    expect(unused).toEqual([]);
+  });
+});
+
+test.describe('Description with emoji and spaces through the menu', () => {
+  test('51 emoji is asked again, then 50 emoji is recorded', async () => {
+    const { output, prompts } = await runScripted([
+      '1', 'B-1', '52',
+      '2', 'Minor', EMOJI.repeat(51), EMOJI.repeat(50),
+      '3', '5',
+    ]);
+    expect(output).toContain('Error: Description must be 100 characters or fewer.');
+    expect(output).toContain('Defect #1 recorded: [Minor] ' + EMOJI.repeat(50));
+    expect(prompts.filter((p) => p.startsWith('Severity')).length).toBe(1);
+    expect(prompts.filter((p) => p.startsWith('Short description')).length).toBe(2);
+  });
+
+  test('100 characters with spaces around is recorded', async () => {
+    const { output } = await runScripted(['1', 'B-1', '52', '2', 'Minor', '  ' + 'a'.repeat(100) + '  ', '5']);
+    expect(output).toContain('Defect #1 recorded: [Minor] ' + 'a'.repeat(100));
+  });
+});
+
+test.describe('Real program: mandatory scenarios 6 and 8', () => {
+  test('6. sample 85, 1 critical defect = REJECT through the real program', () => {
+    const result = runProcess(fullInspection(85, [['Critical', 1]]).join('\n') + '\n');
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(verdictOf(result.stdout)).toBe('REJECT');
+    expect(result.stdout).toContain('Sample size : 85');
+    expect(result.stdout).toContain('Critical    : 1 (limit 0)');
+    expect(result.stdout).toContain('  - Critical defects: 1 (must be 0)');
+  });
+
+  test('8. sample 0 = clear validation error and no verdict through the real program', () => {
+    const result = runProcess('1\nB-101\n0\n4\n5\n');
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Error: Sample size must be 1 or more (you entered 0).');
+    expect(result.stdout).toContain('No inspection started yet. Choose option 1 first.');
+    expect(verdictOf(result.stdout)).toBeNull();
+    expect(result.stdout).not.toContain('Inspection started');
   });
 });

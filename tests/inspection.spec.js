@@ -318,3 +318,172 @@ test.describe('Verdict through the inspection (uses calculateVerdict)', () => {
     });
   });
 });
+
+
+// ---------------------------------------------------------------------------
+// Commit 6: more boundary and equivalence tests.
+// ---------------------------------------------------------------------------
+
+// One emoji is 2 UTF-16 units in JavaScript, so its .length is 2.
+const EMOJI = String.fromCodePoint(0x1f600);
+
+test.describe('Sample size: largest safe whole number and just above', () => {
+  test('Number.MAX_SAFE_INTEGER is valid (number and text)', () => {
+    const fromNumber = new Inspection().startInspection('B-1', Number.MAX_SAFE_INTEGER);
+    expect(fromNumber).toEqual({ valid: true, batchId: 'B-1', sampleSize: 9007199254740991 });
+
+    const fromText = new Inspection().startInspection('B-1', '9007199254740991');
+    expect(fromText.valid).toBe(true);
+    expect(fromText.sampleSize).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
+  test('Number.MAX_SAFE_INTEGER + 1 gives the "positive safe integer" error', () => {
+    const inspection = new Inspection();
+    const result = inspection.startInspection('B-1', Number.MAX_SAFE_INTEGER + 1);
+    expect(result).toEqual({ valid: false, error: 'Sample size must be a positive safe integer.' });
+    expect(inspection.isStarted()).toBe(false);
+  });
+
+  test('too big as text ("9007199254740992" and 20 nines) gives the same error', () => {
+    for (const text of ['9007199254740992', '99999999999999999999']) {
+      const result = new Inspection().startInspection('B-1', text);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Sample size must be a positive safe integer.');
+    }
+  });
+
+  test('other invalid sizes keep their own messages (not changed by this fix)', () => {
+    expect(new Inspection().startInspection('B-1', 'abc').error).toContain('whole number');
+    expect(new Inspection().startInspection('B-1', 5.5).error).toContain('whole number');
+    expect(new Inspection().startInspection('B-1', Infinity).error).toContain('whole number');
+    expect(new Inspection().startInspection('B-1', 0).error).toContain('1 or more');
+  });
+
+  test('a failed oversized restart keeps the current inspection', () => {
+    const inspection = startedInspection(52);
+    addDefects(inspection, 'Major', 2);
+    expect(inspection.startInspection('B-2', Number.MAX_SAFE_INTEGER + 1).valid).toBe(false);
+    expect(inspection.batchId).toBe('B-101');
+    expect(inspection.sampleSize).toBe(52);
+    expect(inspection.listDefects().defects).toHaveLength(2);
+  });
+
+  test('at Number.MAX_SAFE_INTEGER the last table row is used (15 major = ACCEPT, 16 = REJECT)', () => {
+    const inspection = startedInspection(Number.MAX_SAFE_INTEGER);
+    addDefects(inspection, 'Major', 15);
+    expect(inspection.getVerdict().verdict).toBe('ACCEPT');
+    addDefects(inspection, 'Major', 1);
+    expect(inspection.getVerdict().verdict).toBe('REJECT');
+  });
+});
+
+test.describe('Sample size text formats (documented decision)', () => {
+  const validFormats = [
+    ['"52"', '52', 52],
+    ['"007" (leading zeros are allowed)', '007', 7],
+  ];
+  for (const [name, text, expected] of validFormats) {
+    test(`${name} is valid and becomes ${expected}`, () => {
+      const result = new Inspection().startInspection('B-1', text);
+      expect(result.valid).toBe(true);
+      expect(result.sampleSize).toBe(expected);
+    });
+  }
+
+  const invalidFormats = [
+    ['"52.0" (decimal point)', '52.0'],
+    ['"+52" (plus sign)', '+52'],
+    ['"1e3" (scientific notation)', '1e3'],
+  ];
+  for (const [name, text] of invalidFormats) {
+    test(`${name} is invalid with the "whole number" message`, () => {
+      const inspection = new Inspection();
+      const result = inspection.startInspection('B-1', text);
+      expect(result).toEqual({
+        valid: false,
+        error: 'Sample size must be a whole number, for example 52.',
+      });
+      expect(inspection.isStarted()).toBe(false);
+    });
+  }
+});
+
+test.describe('Description length: spaces, inner spaces and emoji', () => {
+  test('exactly 100 characters with spaces around is valid and saved without the spaces', () => {
+    const inspection = startedInspection();
+    const result = inspection.recordDefect('Minor', '  ' + 'a'.repeat(100) + '  ');
+    expect(result.valid).toBe(true);
+    expect(result.defect.description).toHaveLength(100);
+  });
+
+  test('101 characters with spaces around is invalid (spaces are removed first, then counted)', () => {
+    const result = startedInspection().recordDefect('Minor', '  ' + 'a'.repeat(101) + '  ');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Description must be 100 characters or fewer.');
+  });
+
+  test('spaces inside the text count: 100 is valid, 101 is invalid', () => {
+    const inspection = startedInspection();
+    expect(inspection.recordDefect('Minor', 'a' + ' '.repeat(98) + 'b').valid).toBe(true);
+    expect(inspection.recordDefect('Minor', 'a' + ' '.repeat(99) + 'b').valid).toBe(false);
+  });
+
+  test('length is counted in UTF-16 units: one emoji counts as 2', () => {
+    expect(EMOJI).toHaveLength(2);
+    const result = startedInspection().recordDefect('Minor', EMOJI);
+    expect(result.valid).toBe(true);
+    expect(result.defect.description).toBe(EMOJI);
+  });
+
+  test('50 emoji (100 units) is valid, 51 emoji (102 units) is invalid', () => {
+    const inspection = startedInspection();
+    expect(inspection.recordDefect('Minor', EMOJI.repeat(50)).valid).toBe(true);
+    const tooLong = inspection.recordDefect('Minor', EMOJI.repeat(51));
+    expect(tooLong.valid).toBe(false);
+    expect(tooLong.error).toBe('Description must be 100 characters or fewer.');
+  });
+
+  test('49 emoji + "ab" (100 units) is valid, 49 emoji + "abc" (101 units) is invalid', () => {
+    const inspection = startedInspection();
+    expect(inspection.recordDefect('Minor', EMOJI.repeat(49) + 'ab').valid).toBe(true);
+    expect(inspection.recordDefect('Minor', EMOJI.repeat(49) + 'abc').valid).toBe(false);
+  });
+
+  test('emoji with spaces around: spaces are removed before counting', () => {
+    const result = startedInspection().recordDefect('Minor', '  ' + EMOJI.repeat(50) + '  ');
+    expect(result.valid).toBe(true);
+    expect(result.defect.description).toBe(EMOJI.repeat(50));
+  });
+});
+
+test.describe('Batch ID text that looks like a number or a command word', () => {
+  test('"123" is a valid Batch ID and stays text', () => {
+    const result = new Inspection().startInspection('123', 52);
+    expect(result.valid).toBe(true);
+    expect(result.batchId).toBe('123');
+    expect(typeof result.batchId).toBe('string');
+  });
+
+  test('"cancel" is a valid Batch ID (cancel is special only for severity and description in the menu)', () => {
+    const result = new Inspection().startInspection('cancel', 52);
+    expect(result).toEqual({ valid: true, batchId: 'cancel', sampleSize: 52 });
+  });
+
+  test('" CANCEL " is a valid Batch ID and keeps its letters, only spaces are removed', () => {
+    expect(new Inspection().startInspection(' CANCEL ', 52).batchId).toBe('CANCEL');
+  });
+});
+
+test.describe('Severity with a space inside', () => {
+  for (const text of ['Ma jor', ' Ma jor ', 'Cri tical', 'Mi nor']) {
+    test(`"${text}" is invalid and nothing is saved`, () => {
+      const inspection = startedInspection();
+      const result = inspection.recordDefect(text, 'some description');
+      expect(result).toEqual({
+        valid: false,
+        error: 'Severity must be Critical, Major or Minor.',
+      });
+      expect(inspection.listDefects().defects).toHaveLength(0);
+    });
+  }
+});
