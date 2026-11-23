@@ -69,3 +69,19 @@ Note: Git printed "LF will be replaced by CRLF" warnings. This is normal on Wind
 **Mutation check (requested by user, before Commit 3):** temporarily changed `major > limits.major` to `major >= limits.major` in `src/verdict.js`. Actual result: 8 failed, 28 passed (including mandatory tests 1 and 5), so the tests do catch this boundary bug. Original condition was restored (file hash identical) and `npm test` again showed 36 passed. Only the `major` condition was mutated; `minor` and `critical` conditions were not mutation-tested.
 
 ---
+
+## Commit 4 - inspection state and validation (in progress, not yet committed)
+
+- AI proposed `src/inspection.js` (class `Inspection` with start, record defect, list defects, get verdict) and showed the code and test list BEFORE creating files. User approved with clarifications: keep the 100-character description limit but document it in DECISIONS.md as an implementation assumption; invalid new inspection input must leave the existing inspection unchanged; errors returned clearly (`{ valid: false, error }`) so Commit 5 can display them; keep sample-size string parsing, severity normalization and defensive copies.
+- Created `src/inspection.js` and `tests/inspection.spec.js`. Added the assumptions to DECISIONS.md section 3. Commits 1-3 code not changed.
+- Test results: see the actual run below in the next transcript update.
+
+---
+
+**Commit 4 actual test run:** `npm test` -> 94 passed (3.2s), exit code 0 (36 existing verdict tests + 58 new inspection tests). Not committed yet; waiting for user review.
+
+---
+
+**Mutation check for Commit 4 (requested by user):** `src/inspection.js` was backed up, then the condition was temporarily changed from `number < 1` to `number <= 1`. Actual result: the test "sample size 1 is valid" failed as expected (1 failed, 57 passed in `inspection.spec.js`). The original file was restored from the backup and the SHA256 hashes matched (`DC10E0D0...B051DBC`). The complete suite then passed: 94 tests. Only the sample-size condition was mutation-tested.
+
+---
