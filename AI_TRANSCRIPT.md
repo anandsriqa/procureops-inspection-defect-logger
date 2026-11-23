@@ -48,3 +48,24 @@ Note: Git printed "LF will be replaced by CRLF" warnings. This is normal on Wind
 - Playwright install/config will be redone in Commit 2 later. The "Step 2" notes above record what was done earlier and are kept as a true history.
 
 ---
+
+## Commit 2 - Playwright Test (redone after Commit 1 redo)
+
+- Ran `npm install -D @playwright/test` (v1.65.1, 0 vulnerabilities), changed `test` script to `playwright test`, created `playwright.config.js`.
+- Verified with a temporary smoke test (1 passed), then deleted it. Without any test files `npm test` prints "No tests found" (exit 1), which is expected.
+- User reviewed 7 final checks, then confirmed. Committed as `c02ac80` "chore: add Playwright Test dependency and config".
+- AI note: author email on Commit 2 differs from Commit 1 (Git identity changed outside the AI's actions). Left unchanged on user's request.
+
+---
+
+## Commit 3 - verdict logic (in progress, not yet committed)
+
+- AI proposed `src/verdict.js` first. The first proposal IGNORED invalid severities silently, which could turn a REJECT into a wrong ACCEPT. The user pointed this out; the AI agreed it was a flaw in its proposal and changed the code so any invalid severity returns `valid: false` with an error and no verdict.
+- Created `src/verdict.js` and `tests/verdict.spec.js` (36 tests: 8 mandatory, table check, boundary cases, multiple severities, invalid sample sizes, invalid severities). Removed `tests/.gitkeep` since the folder now has a real file.
+- Actual run: `npm test` -> 36 passed (2.0s), exit code 0.
+
+---
+
+**Mutation check (requested by user, before Commit 3):** temporarily changed `major > limits.major` to `major >= limits.major` in `src/verdict.js`. Actual result: 8 failed, 28 passed (including mandatory tests 1 and 5), so the tests do catch this boundary bug. Original condition was restored (file hash identical) and `npm test` again showed 36 passed. Only the `major` condition was mutated; `minor` and `critical` conditions were not mutation-tested.
+
+---
