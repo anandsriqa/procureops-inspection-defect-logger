@@ -1,15 +1,20 @@
 # Claude Code Session Log - Inspection Defect Logger
 
-**This is a filtered transcript extracted from the original Claude Code JSONL session file** (`32657b94-1e84-4253-ad02-452943cd8599.jsonl`, session date 2026-11-23). It lists the user and assistant message text in the order saved in that file, with the original timestamps (UTC).
+**This is a filtered, point-in-time transcript extracted from the original Claude Code JSONL session file** (`32657b94-1e84-4253-ad02-452943cd8599.jsonl`, session date 2026-11-23). It lists the user and assistant message text in the order saved in that file, with the original timestamps (UTC). Apart from the redactions, labels and editor's notes listed below, nothing was written, reworded or reordered by hand.
 
-**What was filtered (nothing was written or reworded by hand):**
+**What was filtered or changed (and nothing else):**
 - Tool calls, tool outputs (file contents, command output), API records and internal session metadata are not included.
-- All email addresses were replaced with `[email redacted]`. This is the only change to message text.
+- **Email addresses** were replaced with `[email redacted]`.
+- **Local Windows user paths** (paths inside the user's Windows profile folder) were replaced with `[local path redacted]`. Project paths such as `D:\Inspection Defect Logger` were kept.
+- **Continuation summary:** when the conversation ran out of context, Claude Code generated a summary and placed it in the file as a "user" record. It is not a message typed by the user, so it is labelled `CONTINUATION SUMMARY`. Its text and timestamp are unchanged. Its timestamp (09:23:40) is earlier than the message printed just before it (09:35:41) because that is how it is stored in the file; the file order was kept.
+- **Internal metadata:** a `<system-reminder>` block with a `<tools-used-before-summary>` list that was attached to the continuation summary is omitted and replaced by an `[Editor's note]`.
 - Only messages that contain text are listed. A message that is only a tool call or tool result is skipped.
-- The transcript ends at the latest message saved in the JSONL file when this file was generated. Messages written after that are not included.
-- The original `.jsonl` file is not part of this repository and was not modified.
+- Text inside `<pasted_content ...>` tags is how the session recorded text that the user pasted; it is kept as it was.
+- Lines starting with `[Editor's note: ...]` were added by the person preparing this file to explain the treatment above. They are not part of the conversation.
 
-The separate file `AI_TRANSCRIPT.md` is a written summary of the work and is unchanged.
+**Point in time:** the transcript ends at the latest message that was saved in the JSONL file when it was generated (a user message at 2026-11-23T09:41:06Z). Later actions are not included, for example the generation of this file, its Git commit and any later cleanup or push.
+
+The separate file `AI_TRANSCRIPT.md` is a written summary of the work and is unchanged. The original `.jsonl` file is not part of this repository and was not modified.
 
 ---
 ### USER [2026-11-23T05:24:16.367Z]
@@ -4234,13 +4239,13 @@ Requirements:
 7. If the original session is unavailable, explain that honestly.
 </pasted_content id="9765">
 
-### USER [2026-11-23T09:23:40.452Z]
+### CONTINUATION SUMMARY [2026-11-23T09:23:40.452Z]
+
+[Editor's note: this is not a message typed by the user. Claude Code generated it automatically when the conversation ran out of context, and the file stores it as a user record. Its text and timestamp are unchanged. The stored timestamp is earlier than the message printed above it; the file order was kept.]
 
 This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
 
-<system-reminder>
-<tools-used-before-summary>Bash, Edit, PowerShell, Read, Write, mcp__ccd_turn__update_plan, mcp__ccd_turn__wrap_up</tools-used-before-summary>
-</system-reminder>
+[Editor's note: an internal metadata block (a system-reminder with a list of tools used before the summary) was omitted here.]
 Summary:
 1. Primary Request and Intent:
    The user (a QA engineer) asked me to act as senior developer and QA mentor and build the "Inspection Defect Logger" assignment for ProcureOps India Pvt. Ltd. It is a simple Node.js command-line app with Playwright Test automated tests, built step by step, with simple English and Hinglish explanations and confirmation after each major step. The features are Start Inspection (Batch ID text, sample size whole number >= 1), Record Defect (severity Critical, Major or Minor, plus a short description), List Defects, and Show Verdict. The verdict rule uses the acceptance-limits table (row with the largest "at least" <= sample size) and rejects on Critical >= 1, Major > limit or Minor > limit. The assignment required 8 mandatory tests, README.md, DECISIONS.md with four sections (where AI got it wrong, what was not built, ambiguity and assumptions, three uncovered risks), at least 5 meaningful Git commits made at stages, and a record of the AI conversation.
@@ -4315,7 +4320,7 @@ Summary:
 9. Optional Next Step:
    None. The user's most recent explicit request (commit AI_TRANSCRIPT.md with the exact message and verify) is complete, and no further task was requested. Nothing should be started without the user's confirmation. If the user wants more, the items they have previously marked as their decision (not requested now) are: whether to keep or remove the `backup-before-redo` branch before final submission, and whether to fix the EPIPE issue or add other optional tests — all of which need an explicit request first.
 
-If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: C:\Users\DELL\.claude\projects\D--Inspection-Defect-Logger\32657b94-1e84-4253-ad02-452943cd8599.jsonl
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: [local path redacted]
 Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.
 
 The messages after this summary are the most recent messages from before compaction, kept verbatim. The summary was written without seeing them, so something it says has not happened yet may already have happened in them.
@@ -4328,7 +4333,7 @@ Pehle main sirf dekh raha hoon ki session files kahan hain. Kuch modify nahi kar
 
 ## Session log mil gaya
 
-**Asli file:** `C:\Users\DELL\.claude\projects\D--Inspection-Defect-Logger\32657b94-1e84-4253-ad02-452943cd8599.jsonl`
+**Asli file:** `[local path redacted]`
 
 - Ye Claude Code ki apni original session file hai (5.5 MB, 1710 lines). Maine ise sirf padha, badla nahi.
 - Ye is project ka akela session hai, 23-11-2026 ko shuru se (05:24 UTC) ab tak. Compaction ke baad bhi purani messages file mein maujood hain.
@@ -4340,7 +4345,7 @@ Pehle main sirf dekh raha hoon ki session files kahan hain. Kuch modify nahi kar
 - **Public repo ke liye dhyan dene wali baat:** log mein ye emails hain: `[email redacted]` (office email), teen personal Gmail addresses, `[email redacted]`, aur `[email redacted]`. Office aur personal emails public GitHub par jaayein, ye tumhara faisla hai.
 
 ## Maine ek preview banaya (repo ke bahar)
-`C:\Users\DELL\AppData\Local\Temp\claude\7cfbf8b4dd3877e9\32657b94-1e84-4253-ad02-452943cd8599\scratchpad\CLAUDE_SESSION_LOG.preview.md` (256 KB)
+`[local path redacted]` (256 KB)
 
 - Isme sirf asli message text hai: 41 tumhare messages aur 108 mere messages, timestamps ke saath.
 - 195 tool calls aur tool outputs chhode gaye hain. Kuch likha ya banaya nahi gaya, sirf asli file se nikala gaya hai.
@@ -4375,7 +4380,7 @@ Emails redact kar do.
 
 ## `CLAUDE_SESSION_LOG.md` taiyaar hai (abhi repo mein nahi hai)
 
-**Proposed file:** `C:\Users\DELL\AppData\Local\Temp\claude\7cfbf8b4dd3877e9\32657b94-1e84-4253-ad02-452943cd8599\scratchpad\CLAUDE_SESSION_LOG.md`
+**Proposed file:** `[local path redacted]`
 
 Poora content 260 KB (3330 lines) hai, chat mein paste nahi ho sakta. Upar file ka header aur pehla message dikha hai, baaki isi format mein hai. Tum file seedha khol kar poori padh sakte ho.
 
@@ -4426,7 +4431,7 @@ Do not copy it into the repository, commit, or push yet. I will review it first.
 
 ## Naya `CLAUDE_SESSION_LOG.md` taiyaar hai (repo mein copy nahi kiya)
 
-**Poora path:** `C:\Users\DELL\AppData\Local\Temp\claude\7cfbf8b4dd3877e9\32657b94-1e84-4253-ad02-452943cd8599\scratchpad\CLAUDE_SESSION_LOG.md`
+**Poora path:** `[local path redacted]`
 
 ### Counts
 | Cheez | Value |
