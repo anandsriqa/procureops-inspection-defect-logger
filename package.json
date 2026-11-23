@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "echo \"No automated tests yet - Playwright Test is added in the next commit\""
+    "test": "playwright test"
   },
   "keywords": [
     "inspection",
@@ -15,5 +15,8 @@
   ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
+  }
 }
